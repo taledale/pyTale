@@ -3,7 +3,6 @@ package dev.taledale;
 import com.hypixel.hytale.logger.HytaleLogger;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
@@ -40,7 +39,7 @@ public class PluginLoader {
     private void loadPythonScript(Path scriptPath) {
         try {
             logger.atInfo().log("Loading Python script: %s", scriptPath.getFileName());
-            String code = new String(Files.readAllBytes(scriptPath), StandardCharsets.UTF_8);
+            String code = Files.readString(scriptPath);
             runtime.eval(code);
             logger.atInfo().log("Loaded: %s", scriptPath.getFileName());
         } catch (Exception e) {

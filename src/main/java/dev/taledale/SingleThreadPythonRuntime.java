@@ -7,7 +7,6 @@ import org.graalvm.polyglot.PolyglotException;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 public class SingleThreadPythonRuntime {
@@ -17,13 +16,10 @@ public class SingleThreadPythonRuntime {
 
     public SingleThreadPythonRuntime() {
         this.logger = PyTale.get().getLogger().getSubLogger("PythonRuntime");
-        this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread t = new Thread(r, "PyTale-Runtime");
-                t.setDaemon(false);
-                return t;
-            }
+        this.executor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "PyTale-Runtime");
+            t.setDaemon(false);
+            return t;
         });
 
         // Initialize context on the executor thread
@@ -35,7 +31,7 @@ public class SingleThreadPythonRuntime {
                     context = Context.newBuilder("python")
                         .allowAllAccess(true)
                         .allowHostAccess(HostAccess.ALL)
-                        .allowHostClassLookup(className -> true)
+                        .allowHostClassLookup(_ -> true)
                         .build();
                     logger.atInfo().log("Python context initialized");
                 } finally {

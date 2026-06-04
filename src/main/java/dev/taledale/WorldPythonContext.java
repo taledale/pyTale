@@ -29,7 +29,7 @@ public class WorldPythonContext {
                 context = Context.newBuilder("python")
                     .allowAllAccess(true)
                     .allowHostAccess(HostAccess.ALL)
-                    .allowHostClassLookup(className -> true)
+                    .allowHostClassLookup(_ -> true)
                     .build();
                 logger.atInfo().log("World Python context initialized");
             } catch (Exception e) {

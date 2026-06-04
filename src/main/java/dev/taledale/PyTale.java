@@ -1,6 +1,5 @@
 package dev.taledale;
 
-import com.hypixel.hytale.event.IEventRegistry;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 
@@ -11,6 +10,7 @@ public class PyTale extends JavaPlugin {
     private SingleThreadPythonRuntime runtime;
     private PluginLoader pluginLoader;
     private WorldContextManager worldContextManager;
+    private SchedulerPythonContext schedulerContext;
 
     public PyTale(@Nonnull JavaPluginInit init) {
         super(init);
@@ -29,6 +29,8 @@ public class PyTale extends JavaPlugin {
         pluginLoader = new PluginLoader(runtime);
         pluginLoader.loadAll();
 
+        schedulerContext = new SchedulerPythonContext(getTaskRegistry());
+
         worldContextManager = new WorldContextManager(getEventRegistry());
         worldContextManager.start();
 
@@ -41,6 +43,9 @@ public class PyTale extends JavaPlugin {
         if (worldContextManager != null) {
             worldContextManager.shutdown();
         }
+        if (schedulerContext != null) {
+            schedulerContext.close();
+        }
         if (pluginLoader != null) {
             pluginLoader.shutdown();
         }
@@ -49,5 +54,9 @@ public class PyTale extends JavaPlugin {
 
     public WorldContextManager getWorldContextManager() {
         return worldContextManager;
+    }
+
+    public SchedulerPythonContext getSchedulerContext() {
+        return schedulerContext;
     }
 }
