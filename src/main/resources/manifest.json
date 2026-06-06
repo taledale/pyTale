@@ -9,5 +9,5 @@
     "Dependencies": {},
     "OptionalDependencies": {},
     "ServerVersion": "=0.5.3",
-    "Main": "dev.taledale.PyTale"
+    "Main": "dev.taledale.pytale.PyTale"
 }

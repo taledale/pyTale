@@ -19,7 +19,7 @@ hytale {
     manifest {
         Group = "TaleDale"
         Name = "PyTale"
-        Main = "dev.taledale.PyTale"
+        Main = "dev.taledale.pytale.PyTale"
         Version = "0.0.1"
         DisabledByDefault = false
         IncludesAssetPack = false
