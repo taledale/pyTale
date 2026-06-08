@@ -15,8 +15,8 @@ public class PluginSchedulerContext {
     private final AtomicReference<Context> context = new AtomicReference<>();
     private final HytaleLogger logger;
 
-    public PluginSchedulerContext(PyPlugin plugin) {
-        this.logger = PyTale.get().getLogger().getSubLogger("[" + plugin.getName() + ":Scheduler]");
+    public PluginSchedulerContext(AbstractPythonPlugin plugin) {
+        this.logger = plugin.getLogger().getSubLogger("[Scheduler]");
     }
 
     public void initialize() {

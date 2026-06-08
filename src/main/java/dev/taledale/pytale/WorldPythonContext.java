@@ -10,9 +10,9 @@ public class WorldPythonContext {
     private final HytaleLogger logger;
     private Context context;
 
-    public WorldPythonContext(PyPlugin plugin, World world) {
+    public WorldPythonContext(AbstractPythonPlugin plugin, World world) {
         this.world = world;
-        this.logger = PyTale.get().getLogger().getSubLogger("[" + plugin.getName() + ":" + world.getName() + "]");
+        this.logger = plugin.getLogger().getSubLogger("[" + world.getName() + "]");
     }
 
     public void initialize() {
