@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class AbstractPythonPlugin extends JavaPlugin {
     private final AtomicReference<Context> generalContext = new AtomicReference<>();
+    private final AtomicReference<java.util.List<String>> wheelPaths = new AtomicReference<>();
     private PluginSchedulerContext schedulerContext;
     private SingleThreadPythonRuntime runtime;
     private WorldContextManager worldContextManager;
@@ -65,9 +66,20 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
                 generalContext.set(ctx);
                 getLogger().atInfo().log("General Python context initialized");
 
-                String pythonCode = loadPythonCode();
-                ctx.eval("python", pythonCode);
-                getLogger().atInfo().log("Plugin code executed");
+                java.nio.file.Path pluginJarPath = getPluginJarPath();
+                String moduleName = getPythonModuleName();
+                java.util.List<String> wheelPathsList = extractWheels(pluginJarPath);
+
+                getLogger().atInfo().log("Found %d wheel(s)", wheelPathsList.size());
+
+                StringBuilder setupCode = new StringBuilder();
+                setupCode.append("import sys\n");
+                for (String wheelPath : wheelPathsList) {
+                    setupCode.append(String.format("sys.path.insert(0, '%s')\n", wheelPath));
+                }
+                setupCode.append(String.format("import %s", moduleName));
+
+                ctx.eval("python", setupCode.toString());
             } catch (PolyglotException e) {
                 getLogger().atWarning().log("Python error during initialization: %s", e.getMessage());
             } catch (Exception e) {
@@ -111,7 +123,6 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
             throw new Exception("Cannot determine plugin location");
         }
         return pluginFile;
-
     }
 
     private String getPythonModuleName() throws Exception {
@@ -129,5 +140,37 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
 
     public PluginSchedulerContext getSchedulerContext() {
         return schedulerContext;
+    }
+
+    public java.util.List<String> getWheelPaths() {
+        java.util.List<String> paths = wheelPaths.get();
+        return paths != null ? paths : new java.util.ArrayList<>();
+    }
+
+    private java.util.List<String> extractWheels(java.nio.file.Path pluginJarPath) throws Exception {
+        java.util.List<String> wheelPathsList = new java.util.ArrayList<>();
+        java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("pytale-wheels-");
+
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(pluginJarPath.toFile())) {
+            zf.stream()
+                    .filter(entry -> entry.getName().endsWith(".whl") && !entry.isDirectory())
+                    .forEach(entry -> {
+                        try {
+                            java.nio.file.Path wheelDest = tempDir.resolve(entry.getName());
+                            try (java.io.InputStream is = zf.getInputStream(entry)) {
+                                java.nio.file.Files.copy(is, wheelDest,
+                                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            }
+                            wheelPathsList.add(wheelDest.toAbsolutePath().toString());
+                            getLogger().atInfo().log("Extracted wheel: %s", wheelDest);
+                        } catch (Exception e) {
+                            getLogger().atWarning().log("Failed to extract wheel %s: %s", entry.getName(),
+                                    e.getMessage());
+                        }
+                    });
+        }
+
+        wheelPaths.set(wheelPathsList);
+        return wheelPathsList;
     }
 }

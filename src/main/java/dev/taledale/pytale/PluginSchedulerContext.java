@@ -14,8 +14,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public class PluginSchedulerContext {
     private final AtomicReference<Context> context = new AtomicReference<>();
     private final HytaleLogger logger;
+    private final AbstractPythonPlugin plugin;
 
     public PluginSchedulerContext(AbstractPythonPlugin plugin) {
+        this.plugin = plugin;
         this.logger = plugin.getLogger().getSubLogger("[Scheduler]");
     }
 
@@ -29,8 +31,22 @@ public class PluginSchedulerContext {
                 Context ctx = PythonContextFactory.newContext();
 
                 context.set(ctx);
+
+                // Add wheel files to sys.path
+                java.util.List<String> wheelPaths = plugin.getWheelPaths();
+                if (!wheelPaths.isEmpty()) {
+                    StringBuilder setupCode = new StringBuilder();
+                    setupCode.append("import sys\n");
+                    for (String wheelPath : wheelPaths) {
+                        setupCode.append(String.format("sys.path.insert(0, '%s')\n", wheelPath));
+                    }
+                    ctx.eval("python", setupCode.toString());
+                }
+
                 ctx.getPolyglotBindings().putMember("_scheduler_api", new SchedulerAPI(this));
                 logger.atInfo().log("Plugin scheduler context initialized");
+            } catch (Exception e) {
+                logger.atWarning().log("Failed to initialize scheduler context: %s", e.getMessage());
             } finally {
                 Thread.currentThread().setContextClassLoader(previousCl);
                 latch.countDown();

@@ -2,31 +2,53 @@
 
 import shutil
 import tempfile
-import tomllib
 import zipfile
 from pathlib import Path
 from typing import Dict
 
 
 class PluginBuilder:
-    def __init__(self, plugin_dir: Path):
-        self.plugin_dir = plugin_dir.resolve()
-        self.pyproject_path = self.plugin_dir / "pyproject.toml"
-        self.metadata = self._read_metadata()
+    def __init__(self, wheel_path: Path):
+        self.wheel_path = wheel_path.resolve()
+        if not self.wheel_path.exists():
+            raise FileNotFoundError(f"Wheel not found: {self.wheel_path}")
+        self.metadata = self._read_metadata_from_wheel()
 
-    def _read_metadata(self) -> Dict:
-        if not self.pyproject_path.exists():
-            raise FileNotFoundError(f"pyproject.toml not found in {self.plugin_dir}")
+    def _read_metadata_from_wheel(self) -> Dict:
+        """Extract metadata from wheel's dist-info/METADATA"""
+        with zipfile.ZipFile(self.wheel_path, "r") as whl:
+            dist_info_dirs = [n for n in whl.namelist() if ".dist-info/" in n]
+            if not dist_info_dirs:
+                raise ValueError(f"No dist-info found in wheel {self.wheel_path.name}")
 
-        with open(self.pyproject_path, "rb") as f:
-            data = tomllib.load(f)
+            dist_info_dir = dist_info_dirs[0].split("/")[0]
+            metadata_file = f"{dist_info_dir}/METADATA"
 
-        project = data.get("project", {})
-        return {
-            "name": project.get("name", self.plugin_dir.name),
-            "version": project.get("version", "1.0.0"),
-            "description": project.get("description", ""),
-        }
+            try:
+                metadata_content = whl.read(metadata_file).decode("utf-8")
+            except KeyError:
+                raise FileNotFoundError(f"METADATA not found in {self.wheel_path.name}")
+
+            name = None
+            version = None
+            description = ""
+
+            for line in metadata_content.split("\n"):
+                if line.startswith("Name:"):
+                    name = line.split(":", 1)[1].strip()
+                elif line.startswith("Version:"):
+                    version = line.split(":", 1)[1].strip()
+                elif line.startswith("Summary:"):
+                    description = line.split(":", 1)[1].strip()
+
+            if not name:
+                raise ValueError(f"Package name not found in wheel metadata")
+
+            return {
+                "name": name,
+                "version": version or "1.0.0",
+                "description": description,
+            }
 
     def _copy_loader_class(self, temp_dir: Path) -> str:
         """Copy pre-compiled PythonPlugin.class from resources"""
@@ -72,34 +94,12 @@ class PluginBuilder:
         manifest_path.write_text(json.dumps(manifest, indent=4))
         return manifest_path
 
-    def _copy_python_code(self, temp_dir: Path):
-        """Copy Python code to python/<module_name>/ directory"""
-        plugin_name = self.metadata["name"].replace("-", "_")
-        plugin_pkg = self.plugin_dir / plugin_name
-        python_dir = temp_dir / "python" / plugin_name
-        python_dir.mkdir(parents=True, exist_ok=True)
-
-        if plugin_pkg.exists() and (plugin_pkg / "__init__.py").exists():
-            for item in plugin_pkg.rglob("*"):
-                relative = item.relative_to(plugin_pkg)
-                dest = python_dir / relative
-                if item.is_file():
-                    dest.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(item, dest)
-        else:
-            raise FileNotFoundError(
-                f"Python package not found. Expected: {plugin_pkg} with __init__.py"
-            )
-
-        if not list(python_dir.rglob("*.py")):
-            raise FileNotFoundError(f"No .py files found in {plugin_pkg}")
-
-    def _copy_venv(self, temp_dir: Path):
-        """Copy .venv if it exists"""
-        venv_src = self.plugin_dir / ".venv"
-        if venv_src.exists():
-            venv_dst = temp_dir / ".venv"
-            shutil.copytree(venv_src, venv_dst)
+    def _copy_wheel_file(self, temp_dir: Path):
+        """Copy wheel file to JAR root"""
+        wheel_name = self.wheel_path.name
+        dest_wheel = temp_dir / wheel_name
+        shutil.copy2(self.wheel_path, dest_wheel)
+        print(f"✓ Copied wheel: {wheel_name}")
 
     def _create_jar(self, temp_dir: Path, output_path: Path) -> Path:
         """Create JAR from temp directory, excluding build artifacts"""
@@ -127,17 +127,14 @@ class PluginBuilder:
         with tempfile.TemporaryDirectory() as temp_dir_str:
             temp_dir = Path(temp_dir_str)
 
-            # Copy universal PythonPlugin loader class from pytale.jar
+            # Copy universal PythonPlugin loader class
             self._copy_loader_class(temp_dir)
 
             # Create manifest.json
             self._create_manifest_json(temp_dir)
 
-            # Copy Python code
-            self._copy_python_code(temp_dir)
-
-            # Copy .venv if exists
-            self._copy_venv(temp_dir)
+            # Copy wheel file
+            self._copy_wheel_file(temp_dir)
 
             # Create JAR
             self._create_jar(temp_dir, output_path)
