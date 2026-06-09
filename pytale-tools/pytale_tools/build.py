@@ -106,7 +106,7 @@ class PluginBuilder:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def _parse_requirements(self) -> list[str]:
-        """Parse requirements.txt and return list of package specs"""
+        """Parse requirements.txt and return list of package specs (without hashes)"""
         if not self.requirements_path:
             return []
 
@@ -115,20 +115,28 @@ class PluginBuilder:
             content = f.read()
 
         # Handle line continuations (backslash at end of line)
-        lines: list[str] = []
         current_line = ""
         for line in content.split("\n"):
-            # Remove inline comments
-            if "#" in line and not line.strip().startswith("#"):
-                line = line.split("#")[0]
-
             line = line.rstrip()
             if line.endswith("\\"):
                 current_line += line[:-1].strip() + " "
             else:
                 current_line += line
-                if current_line.strip() and not current_line.strip().startswith("#"):
-                    requirements.append(current_line.strip())
+                current_line = current_line.strip()
+
+                # Skip comments, empty lines, and editable installs
+                if (
+                    not current_line
+                    or current_line.startswith("#")
+                    or current_line.startswith("-e ")
+                ):
+                    current_line = ""
+                    continue
+
+                # Extract spec without hashes (everything before --hash)
+                spec = current_line.split("--hash")[0].strip()
+                if spec:
+                    requirements.append(spec)
                 current_line = ""
 
         return requirements
@@ -166,6 +174,10 @@ class PluginBuilder:
             return []
 
         self._ensure_cache_dir()
+        requirements = self._parse_requirements()
+        if not requirements:
+            return []
+
         print(f"Downloading dependencies from {self.requirements_path.name}...")
 
         try:
@@ -192,15 +204,40 @@ class PluginBuilder:
                 f"Failed to download dependencies: {e.stderr.decode() if e.stderr else str(e)}"
             )
 
-        # Collect all downloaded wheels
-        wheel_paths = list(self.cache_dir.glob("*.whl"))
-        if not wheel_paths:
-            raise FileNotFoundError(
-                f"No wheels downloaded from {self.requirements_path.name}"
-            )
+        # Match wheels to requirements (find wheels for each required package)
+        wheel_paths = []
+        for req_spec in requirements:
+            # Extract package name and version from spec
+            # e.g., "tomli==2.4.1" -> name="tomli", version="2.4.1"
+            if "==" in req_spec:
+                req_name, req_version = req_spec.split("==", 1)
+                req_name = req_name.strip()
+                req_version = req_version.strip()
+            else:
+                # For specs without ==, just use the whole thing as name
+                req_name = req_spec.strip()
+                req_version = None
 
-        for wheel_path in wheel_paths:
-            print(f"✓ Downloaded: {wheel_path.name}")
+            # Find the wheel matching this package name and version in cache
+            found = False
+            for wheel_file in self.cache_dir.glob(f"{req_name.replace('-', '_')}*.whl"):
+                # Extract version from wheel filename
+                # Format: {name}-{version}-{python}-{abi}-{platform}.whl
+                wheel_name_parts = wheel_file.name.split("-")
+                if len(wheel_name_parts) >= 2:
+                    wheel_version = wheel_name_parts[1]
+
+                    # Check version matches if required
+                    if req_version and wheel_version != req_version:
+                        continue
+
+                    print(f"✓ Downloaded: {wheel_file.name}")
+                    wheel_paths.append(wheel_file)
+                    found = True
+                    break
+
+            if not found:
+                raise FileNotFoundError(f"Wheel not found for {req_spec}")
 
         return wheel_paths
 
