@@ -8,6 +8,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "pytale",
     "pytale-tools",
     "test-plugin",
 ]
@@ -126,6 +127,11 @@ wheels = [
 ]
 
 [[package]]
+name = "pytale"
+version = "0.5.3.post1"
+source = { editable = "pyTale" }
+
+[[package]]
 name = "pytale-tools"
 version = "0.0.1"
 source = { editable = "pytale-tools" }
@@ -169,3 +175,9 @@ wheels = [
 name = "test-plugin"
 version = "1.0.0"
 source = { editable = "test-plugin" }
+dependencies = [
+    { name = "pytale" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pytale", editable = "pyTale" }]

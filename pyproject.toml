@@ -2,7 +2,10 @@
 python-preference = "only-managed"
 
 [tool.uv.workspace]
-members = ["pytale-tools", "test-plugin"]
+members = ["pyTale", "pytale-tools", "test-plugin"]
+
+[tool.uv.sources]
+pytale = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -10,5 +13,9 @@ dev = [
     "isort",
 ]
 
+[tool.isort]
+profile = "black"
+
 [tool.mypy]
 python_version = "3.12"
+disallow_untyped_defs = true

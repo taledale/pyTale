@@ -43,6 +43,11 @@ public class PluginSchedulerContext {
                     ctx.eval("python", setupCode.toString());
                 }
 
+                plugin.initializePytale(ctx, ExecutionContext.SCHEDULER);
+
+                String moduleName = plugin.getManifest().getName().replace("-", "_");
+                ctx.eval("python", String.format("import %s", moduleName));
+
                 ctx.getPolyglotBindings().putMember("_scheduler_api", new SchedulerAPI(this));
                 logger.atInfo().log("Plugin scheduler context initialized");
             } catch (Exception e) {

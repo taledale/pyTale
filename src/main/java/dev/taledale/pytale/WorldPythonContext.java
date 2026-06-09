@@ -35,6 +35,11 @@ public class WorldPythonContext {
                     context.eval("python", setupCode.toString());
                 }
 
+                plugin.initializePytale(context, ExecutionContext.WORLD);
+
+                String moduleName = plugin.getManifest().getName().replace("-", "_");
+                context.eval("python", String.format("import %s", moduleName));
+
                 logger.atInfo().log("World Python context initialized");
             } catch (Exception e) {
                 logger.atSevere().log("Failed to initialize context: %s", e.getMessage());

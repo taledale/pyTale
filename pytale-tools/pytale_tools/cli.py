@@ -37,7 +37,7 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> int:
     parser = create_parser()
     args = parser.parse_args()
 
@@ -54,10 +54,11 @@ def main():
             )
             output = args.output or Path(f"{builder.metadata['name']}.jar")
             builder.build(output)
-            return 0
     except Exception as e:
         print(f"✗ Error: {e}", file=sys.stderr)
         return 1
+
+    return 0
 
 
 if __name__ == "__main__":

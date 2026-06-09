@@ -1,8 +1,31 @@
-import test_plugin.helpers
-from test_plugin.utils import math
+from pytale.plugin import (
+    get_context,
+    get_data_directory,
+    get_identifier,
+    get_manifest,
+)
 
-print("Hello from test_plugin!")
-print(f"Version: {test_plugin.helpers.get_version()}")
-print(f"Greeting: {test_plugin.helpers.get_greeting('Plugin')}")
-print(f"2 + 3 = {math.add(2, 3)}")
-print(f"4 * 5 = {math.multiply(4, 5)}")
+print("=" * 60)
+print("pyTale Plugin Information")
+print("=" * 60)
+
+identifier = get_identifier()
+print(f"\nIdentifier:")
+print(f"  Group: {identifier.group}")
+print(f"  Name: {identifier.name}")
+
+manifest = get_manifest()
+print(f"\nManifest:")
+print(f"  Name: {manifest.name}")
+print(f"  Version: {manifest.version}")
+print(f"  Description: {manifest.description}")
+print(f"  Authors: {manifest.authors}")
+print(f"  Website: {manifest.website}")
+
+data_dir = get_data_directory()
+print(f"\nData Directory: {data_dir}")
+
+context = get_context()
+print(f"\nExecution Context: {context.name} ({context.value})")
+
+print("\n" + "=" * 60)

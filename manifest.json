@@ -1,0 +1,14 @@
+{
+    "Group": "TaleDale",
+    "Name": "test-plugin",
+    "Version": "1.0.0",
+    "Authors": [],
+    "DisabledByDefault": false,
+    "IncludesAssetPack": false,
+    "Dependencies": {
+        "TaleDale:PyTale": ">=0.0.1"
+    },
+    "OptionalDependencies": {},
+    "ServerVersion": "=0.5.3",
+    "Main": "dev.taledale.pytale.PythonPlugin"
+}

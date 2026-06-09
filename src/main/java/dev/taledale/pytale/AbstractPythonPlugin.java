@@ -77,8 +77,13 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
                 for (String wheelPath : wheelPathsList) {
                     setupCode.append(String.format("sys.path.insert(0, '%s')\n", wheelPath));
                 }
-                setupCode.append(String.format("import %s", moduleName));
 
+                ctx.eval("python", setupCode.toString());
+
+                initializePytale(ctx, ExecutionContext.GENERAL);
+
+                setupCode = new StringBuilder();
+                setupCode.append(String.format("import %s", moduleName));
                 ctx.eval("python", setupCode.toString());
             } catch (PolyglotException e) {
                 getLogger().atWarning().log("Python error during initialization: %s", e.getMessage());
@@ -128,6 +133,18 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
     private String getPythonModuleName() throws Exception {
         String name = getManifest().getName();
         return name.replace("-", "_");
+    }
+
+    protected void initializePytale(Context ctx, ExecutionContext executionContext) {
+        org.graalvm.polyglot.Value bindings = ctx.getBindings("python");
+        bindings.putMember("__identifier", getIdentifier());
+        bindings.putMember("__manifest", getManifest());
+        bindings.putMember("__data_directory", getDataDirectory());
+        bindings.putMember("__context", executionContext.getValue());
+        ctx.eval("python",
+                "import pytale.plugin._plugin\n" +
+                        "pytale.plugin._plugin._init_plugin" +
+                        "(__identifier, __manifest, __data_directory, __context)");
     }
 
     private void initializeSchedulerContext() {

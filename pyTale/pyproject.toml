@@ -1,0 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytale"
+version = "0.5.3-1"
+description = "pyTale Python library for Hytale plugins"
+requires-python = ">=3.12"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pytale"]
