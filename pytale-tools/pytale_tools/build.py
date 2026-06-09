@@ -5,15 +5,14 @@ import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional
 
 
 class PluginBuilder:
     def __init__(
         self,
         wheel_path: Path,
-        requirements_path: Optional[Path] = None,
-        cache_dir: Optional[Path] = None,
+        requirements_path: Path | None = None,
+        cache_dir: Path | None = None,
     ):
         self.wheel_path = wheel_path.resolve()
         if not self.wheel_path.exists():
@@ -43,7 +42,7 @@ class PluginBuilder:
 
         self.metadata = self._read_metadata_from_wheel()
 
-    def _read_metadata_from_wheel(self) -> Dict:
+    def _read_metadata_from_wheel(self) -> dict[str, str]:
         """Extract metadata from wheel's dist-info/METADATA"""
         with zipfile.ZipFile(self.wheel_path, "r") as whl:
             dist_info_dirs = [n for n in whl.namelist() if ".dist-info/" in n]
@@ -106,7 +105,7 @@ class PluginBuilder:
         """Ensure cache directory exists"""
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-    def _parse_requirements(self) -> List[str]:
+    def _parse_requirements(self) -> list[str]:
         """Parse requirements.txt and return list of package specs"""
         if not self.requirements_path:
             return []
@@ -116,7 +115,7 @@ class PluginBuilder:
             content = f.read()
 
         # Handle line continuations (backslash at end of line)
-        lines = []
+        lines: list[str] = []
         current_line = ""
         for line in content.split("\n"):
             # Remove inline comments
@@ -134,7 +133,7 @@ class PluginBuilder:
 
         return requirements
 
-    def _get_cached_wheel(self, package_spec: str) -> Optional[Path]:
+    def _get_cached_wheel(self, package_spec: str) -> Path | None:
         """Check if wheel for package spec exists in cache"""
         self._ensure_cache_dir()
 
@@ -161,7 +160,7 @@ class PluginBuilder:
         dest = self.cache_dir / wheel_path.name
         shutil.copy2(wheel_path, dest)
 
-    def _download_dependencies(self) -> List[Path]:
+    def _download_dependencies(self) -> list[Path]:
         """Download wheels for all dependencies from requirements.txt"""
         if not self.requirements_path:
             return []
@@ -206,7 +205,7 @@ class PluginBuilder:
         return wheel_paths
 
     def _copy_all_wheels(
-        self, additional_wheel_paths: List[Path], temp_dir: Path
+        self, additional_wheel_paths: list[Path], temp_dir: Path
     ) -> None:
         """Copy main wheel and all dependency wheels to JAR root"""
         # Copy main wheel

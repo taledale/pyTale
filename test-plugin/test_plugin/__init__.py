@@ -1,9 +1,7 @@
-import tomli
 import test_plugin.helpers
 from test_plugin.utils import math
 
 print("Hello from test_plugin!")
-print(f"tomli imported successfully: {tomli.__name__}")
 print(f"Version: {test_plugin.helpers.get_version()}")
 print(f"Greeting: {test_plugin.helpers.get_greeting('Plugin')}")
 print(f"2 + 3 = {math.add(2, 3)}")

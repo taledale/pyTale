@@ -3,3 +3,12 @@ python-preference = "only-managed"
 
 [tool.uv.workspace]
 members = ["pytale-tools", "test-plugin"]
+
+[dependency-groups]
+dev = [
+    "black",
+    "isort",
+]
+
+[tool.mypy]
+python_version = "3.12"

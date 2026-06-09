@@ -4,14 +4,13 @@ import argparse
 import sys
 from pathlib import Path
 
-from .build import PluginBuilder
+from pytale_tools.build import PluginBuilder
 
 
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure argument parser"""
     parser = argparse.ArgumentParser(
-        prog="pytale-tools",
-        description="PyTale development tools"
+        prog="pytale-tools", description="PyTale development tools"
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
@@ -20,19 +19,19 @@ def create_parser() -> argparse.ArgumentParser:
     build_parser = subparsers.add_parser("build", help="Build a Python plugin JAR")
     build_parser.add_argument("wheel", type=Path, help="Path to wheel file (.whl)")
     build_parser.add_argument(
-        "-o", "--output",
-        type=Path,
-        help="Output JAR path (default: plugin-name.jar)"
+        "-o", "--output", type=Path, help="Output JAR path (default: plugin-name.jar)"
     )
     build_parser.add_argument(
-        "-r", "--requirements",
+        "-r",
+        "--requirements",
         type=Path,
-        help="Optional: path to requirements.txt for plugin dependencies (versions must be pinned with ==)"
+        help="Optional: path to requirements.txt for plugin dependencies (versions must be pinned with ==)",
     )
     build_parser.add_argument(
-        "-c", "--cache-dir",
+        "-c",
+        "--cache-dir",
         type=Path,
-        help="Optional: directory for caching downloaded wheels (default: .pytale/wheels in project or ~/.cache/pytale/wheels)"
+        help="Optional: directory for caching downloaded wheels (default: .pytale/wheels in project or ~/.cache/pytale/wheels)",
     )
 
     return parser
@@ -51,7 +50,7 @@ def main():
             builder = PluginBuilder(
                 args.wheel,
                 args.requirements,
-                args.cache_dir if hasattr(args, 'cache_dir') else None
+                args.cache_dir if hasattr(args, "cache_dir") else None,
             )
             output = args.output or Path(f"{builder.metadata['name']}.jar")
             builder.build(output)
