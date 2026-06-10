@@ -6,9 +6,9 @@ build-backend = "hatchling.build"
 name = "test-plugin"
 version = "1.0.0"
 description = "Test plugin for pyTale"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
-    "pytale==0.5.3-1",
+    "pytale==0.5.4-1",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -10,7 +10,7 @@ plugins {
 
 hytale {
     usePatchline("release")
-    useVersion("0.5.3")
+    useVersion("0.5.4")
 
     dependencies {
         // Any external dependency you also want to include
@@ -23,6 +23,6 @@ hytale {
         Version = "0.0.1"
         DisabledByDefault = false
         IncludesAssetPack = false
-        ServerVersion = "=0.5.3"
+        ServerVersion = "=0.5.4"
     }
 }
