@@ -1,15 +1,20 @@
 package dev.taledale.pytale;
 
+import com.hypixel.hytale.event.IEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
 import dev.taledale.pytale.context.PythonContext;
 import dev.taledale.pytale.context.world.WorldContextManager;
+import dev.taledale.pytale.context.world.WorldPythonContext;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Value;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,6 +56,7 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
                     ExecutionContext.GENERAL);
             submitToGeneral(generalContext::init, true);
 
+            readAndRegisterEventHandlers();
             executeLifecycleListeners("setup");
             worldContextManager.start();
         } catch (Exception e) {
@@ -111,6 +117,64 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
                 ctx.leave();
             }
         }, true);
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes", "null" })
+    private void readAndRegisterEventHandlers() {
+        if (generalContext == null)
+            return;
+        Context ctx = generalContext.getContext();
+        if (ctx == null)
+            return;
+
+        submitToGeneral(() -> {
+            ctx.enter();
+            try {
+                ctx.eval("python",
+                        "import pytale.events._registry as __reg\n" +
+                                "__handlers = __reg._handlers");
+                Value handlers = ctx.getBindings("python").getMember("__handlers");
+                int size = (int) handlers.getArraySize();
+                for (int i = 0; i < size; i++) {
+                    int index = i;
+                    Value handler = handlers.getArrayElement(i);
+                    Class<? extends IEvent<?>> eventClass = (Class<? extends IEvent<?>>) handler.getMember("java_class")
+                            .asHostObject();
+                    short priority = (short) handler.getMember("priority").asInt();
+                    Value keyValue = handler.getMember("key");
+                    Consumer<IEvent<?>> listener = event -> dispatchToCurrentThread(index, event);
+                    if (keyValue.isNull()) {
+                        getEventRegistry().registerGlobal(priority, (Class) eventClass, (Consumer) listener);
+                    } else {
+                        Object key = keyValue.asHostObject();
+                        getEventRegistry().register(priority, (Class) eventClass, key, (Consumer) listener);
+                    }
+                    getLogger().atInfo().log("Registered event handler %d for %s", index, eventClass.getSimpleName());
+                }
+            } catch (Exception e) {
+                getLogger().atWarning().log("Error reading event handlers: %s", e.getMessage());
+            } finally {
+                ctx.leave();
+            }
+        }, true);
+    }
+
+    private void dispatchToCurrentThread(int index, IEvent<?> event) {
+        World world = Universe.get().getWorlds().values().stream()
+                .filter(World::isInThread)
+                .findFirst()
+                .orElse(null);
+        if (world == null) {
+            getLogger().atWarning().log("No world for current thread, skipping event handler %d", index);
+            return;
+        }
+        WorldPythonContext context = worldContextManager.getContext(world);
+        if (context == null) {
+            getLogger().atWarning().log("No context for world %s, skipping event handler %d", world.getName(),
+                    index);
+            return;
+        }
+        context.invokeEventHandler(index, event);
     }
 
     public void submitToGeneral(Runnable task) {
