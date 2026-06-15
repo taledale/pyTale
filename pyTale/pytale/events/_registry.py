@@ -1,8 +1,8 @@
-import java as _java
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+import java as _java
 from pytale.events._types import EventHandler, EventPriority, TEvent, TResult
 
 if TYPE_CHECKING:

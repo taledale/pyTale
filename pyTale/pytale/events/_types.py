@@ -24,7 +24,7 @@ class EventHandler(Generic[TEvent, TResult]):
         handler: Callable[[TEvent], TResult],
         *,
         key: Any = None,
-        priority: int = EventPriority.NORMAL,
+        priority: EventPriority = EventPriority.NORMAL,
     ):
         self.java_class: "Final[JavaClass]" = java_class
         self.key: Final[Any] = key

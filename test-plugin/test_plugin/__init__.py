@@ -1,3 +1,5 @@
+from typing import Any
+
 import java
 from pytale.events import on_event
 from pytale.plugin import (
@@ -10,8 +12,12 @@ from pytale.plugin import (
     on_start,
 )
 
-_AddPlayerToWorldEvent = java.type("com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent")
-_PlayerReadyEvent = java.type("com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent")
+_AddPlayerToWorldEvent = java.type(
+    "com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent"
+)
+_PlayerReadyEvent = java.type(
+    "com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent"
+)
 
 print("=" * 60)
 print("pyTale Plugin Information")
@@ -55,10 +61,12 @@ def on_plugin_shutdown() -> None:
 
 
 @on_event(_AddPlayerToWorldEvent)
-def handle_add_player_to_world(event) -> None:
-    print(f"[EVENT/off-WorldThread] AddPlayerToWorldEvent: world={event.getWorld().getName()}")
+def handle_add_player_to_world(event: Any) -> None:
+    print(
+        f"[EVENT/off-WorldThread] AddPlayerToWorldEvent: world={event.getWorld().getName()}"
+    )
 
 
 @on_event(_PlayerReadyEvent)
-def handle_player_ready(event) -> None:
+def handle_player_ready(event: Any) -> None:
     print(f"[EVENT/WorldThread] PlayerReadyEvent: player={event.getPlayer().getUuid()}")
