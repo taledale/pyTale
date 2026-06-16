@@ -53,10 +53,11 @@ public class PythonContext {
         bindings.putMember("__manifest", plugin.getManifest());
         bindings.putMember("__data_directory", plugin.getDataDirectory());
         bindings.putMember("__context", executionContext.getValue());
+        bindings.putMember("__plugin", plugin);
         context.eval("python",
                 "import pytale.plugin._plugin\n" +
                         "pytale.plugin._plugin._init_plugin" +
-                        "(__identifier, __manifest, __data_directory, __context)");
+                        "(__identifier, __manifest, __data_directory, __context, __plugin)");
 
         String moduleName = plugin.getManifest().getName().replace("-", "_");
         context.eval("python", "import " + moduleName);

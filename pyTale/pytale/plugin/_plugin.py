@@ -3,7 +3,12 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from pytale.plugin._types import ExecutionContext, PluginIdentifier, PluginManifest
+from pytale.plugin._types import (
+    ExecutionContext,
+    PluginIdentifier,
+    PluginManifest,
+    PluginState,
+)
 
 if TYPE_CHECKING:
     from java import JavaObject
@@ -12,6 +17,7 @@ __identifier: PluginIdentifier | None = None
 __manifest: PluginManifest | None = None
 __data_directory: Path | None = None
 __context: ExecutionContext | None = None
+__plugin_ref: "JavaObject | None" = None
 
 
 def _init_plugin(
@@ -19,13 +25,15 @@ def _init_plugin(
     manifest: "JavaObject",
     data_directory: "JavaObject",
     context: int,
+    java_plugin: "JavaObject",
 ) -> None:
     """Called by Java during plugin context initialization"""
-    global __identifier, __manifest, __data_directory, __context
+    global __identifier, __manifest, __data_directory, __context, __plugin_ref
     __identifier = PluginIdentifier(identifier)
     __manifest = PluginManifest(manifest)
     __data_directory = Path(str(data_directory))
     __context = ExecutionContext(context)
+    __plugin_ref = java_plugin
 
 
 def get_identifier() -> PluginIdentifier:
@@ -54,3 +62,10 @@ def get_context() -> ExecutionContext:
     if __context is None:
         raise RuntimeError("Plugin not initialized")
     return __context
+
+
+def get_state() -> PluginState:
+    """Get current plugin lifecycle state, read live from the Java plugin object"""
+    if __plugin_ref is None:
+        raise RuntimeError("Plugin not initialized")
+    return PluginState[str(__plugin_ref.getState().name())]

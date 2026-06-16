@@ -14,6 +14,18 @@ class ExecutionContext(IntEnum):
     WORLD = 1
 
 
+class PluginState(IntEnum):
+    """Current lifecycle state of the plugin, mirroring com.hypixel.hytale.server.core.plugin.PluginState"""
+
+    NONE = 0
+    SETUP = 1
+    START = 2
+    ENABLED = 3
+    SHUTDOWN = 4
+    DISABLED = 5
+    FAILED = 6
+
+
 class PluginIdentifier:
     """Wrapper for com.hypixel.hytale.common.plugin.PluginIdentifier"""
 

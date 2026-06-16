@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any
 
 import java as _java
 from pytale.events._types import EventHandler, EventPriority, TEvent, TResult
+from pytale.plugin._plugin import get_context, get_state
+from pytale.plugin._types import ExecutionContext, PluginState
 
 if TYPE_CHECKING:
     from java import JavaClass
@@ -37,6 +39,14 @@ def on_event(
     key: Any = None,
     priority: EventPriority = EventPriority.NORMAL,
 ) -> Callable[[Callable[[TEvent], TResult]], EventHandler[TEvent, TResult]]:
+    if get_context() == ExecutionContext.GENERAL:
+        state = get_state()
+        if state != PluginState.SETUP:
+            raise RuntimeError(
+                f"@on_event can only be used during plugin setup "
+                f"(current state: {state.name})"
+            )
+
     _check_event_class(java_class)
 
     def decorator(func: Callable[[TEvent], TResult]) -> EventHandler[TEvent, TResult]:

@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 import java as _java
 from pytale.events._types import AsyncEventHandler, EventPriority, TEvent, TResult
+from pytale.plugin._plugin import get_context, get_state
+from pytale.plugin._types import ExecutionContext, PluginState
 
 if TYPE_CHECKING:
     from java import JavaClass
@@ -103,6 +105,22 @@ def on_async_event(
 ) -> Callable[
     [Callable[[TEvent], Awaitable[TResult]]], AsyncEventHandler[TEvent, TResult]
 ]:
+    if get_context() != ExecutionContext.GENERAL:
+
+        def __no_op(
+            func: Callable[[TEvent], Awaitable[TResult]],
+        ) -> AsyncEventHandler[TEvent, TResult]:
+            return AsyncEventHandler(java_class, func, key=key, priority=priority)
+
+        return __no_op
+
+    state = get_state()
+    if state != PluginState.SETUP:
+        raise RuntimeError(
+            f"@on_async_event can only be used during plugin setup "
+            f"(current state: {state.name})"
+        )
+
     _check_event_class(java_class)
 
     def decorator(
