@@ -15,6 +15,7 @@ from pytale.plugin import (
     on_shutdown,
     on_start,
 )
+from pytale.world import ChunkNotLoadedError, get_world
 
 if TYPE_CHECKING:
     from java import JavaObject
@@ -106,6 +107,21 @@ def handle_player_ready(event: "JavaObject") -> None:
     assert (
         state == PluginState.ENABLED
     ), f"Expected ENABLED in event handler, got {state.name}"
+
+    # World API demo (runs on the WorldThread, so get_world() is available here)
+    world = get_world()
+    config = world.config
+    print(f"[WORLD] name={world.name!r} tick={world.tick} alive={world.is_alive}")
+    print(f"[WORLD] players={world.player_count} ticking={world.is_ticking}")
+    print(
+        f"[WORLD] config: uuid={config.uuid} seed={config.seed} "
+        f"pvp={config.is_pvp_enabled} game_mode={config.game_mode}"
+    )
+    try:
+        block = world.get_block(0, 64, 0)
+        print(f"[WORLD] block at (0, 64, 0) = {block}")
+    except ChunkNotLoadedError as error:
+        print(f"[WORLD] block read skipped: {error}")
 
 
 @on_async_event(_PlayerChatEvent)

@@ -59,10 +59,21 @@ public class PythonContext {
                         "pytale.plugin._plugin._init_plugin" +
                         "(__identifier, __manifest, __data_directory, __context, __plugin)");
 
+        initContextBindings(bindings);
+
         String moduleName = plugin.getManifest().getName().replace("-", "_");
         context.eval("python", "import " + moduleName);
 
         logger.atInfo().log("Python context initialized");
+    }
+
+    /**
+     * Hook for context-specific Python bindings, evaluated after the core plugin init but
+     * before the plugin module is imported. No-op by default; overridden by contexts that
+     * inject extra objects (e.g. the world). Runs inside the context.
+     */
+    protected void initContextBindings(Value bindings) {
+        // no-op
     }
 
     /**

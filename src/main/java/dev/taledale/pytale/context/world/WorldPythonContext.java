@@ -4,6 +4,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import dev.taledale.pytale.AbstractPythonPlugin;
 import dev.taledale.pytale.ExecutionContext;
 import dev.taledale.pytale.context.PythonContext;
+import org.graalvm.polyglot.Value;
 
 public class WorldPythonContext extends PythonContext {
     private final World world;
@@ -19,6 +20,14 @@ public class WorldPythonContext extends PythonContext {
     @Override
     public void init() {
         world.execute(() -> super.init());
+    }
+
+    @Override
+    protected void initContextBindings(Value bindings) {
+        bindings.putMember("__world", world);
+        context.eval("python",
+                "import pytale.world._world\n" +
+                        "pytale.world._world._init_world(__world)");
     }
 
     public void eval(String code) {
