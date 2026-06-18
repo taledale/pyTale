@@ -203,7 +203,9 @@ class PluginBuilder:
     def _is_build_only(name: str) -> bool:
         if name in _BUILD_ONLY:
             return True
-        if name.endswith(".dist-info") and name.startswith(_BUILD_ONLY_DISTINFO_PREFIXES):
+        if name.endswith(".dist-info") and name.startswith(
+            _BUILD_ONLY_DISTINFO_PREFIXES
+        ):
             return True
         return False
 
@@ -255,7 +257,9 @@ class PluginBuilder:
             # The plugin's own package(s) live in src/, not the venv; drop them at the
             # site-packages root only (not from same-named subdirs of dependencies).
             if Path(src) == site_packages:
-                skip |= {n for n in names if n in plugin_top_level or n == plugin_dist_info}
+                skip |= {
+                    n for n in names if n in plugin_top_level or n == plugin_dist_info
+                }
             return skip
 
         shutil.copytree(site_packages, dest_sp, ignore=ignore)
@@ -279,7 +283,8 @@ class PluginBuilder:
 
     def _write_fileslist(self, temp_dir: Path, vfs_root_rel: str) -> None:
         """Write GraalPy's VFS index. Each line is an absolute resource path; directories end
-        with '/'. The VirtualFileSystem reads this to enumerate files embedded in the jar."""
+        with '/'. The VirtualFileSystem reads this to enumerate files embedded in the jar.
+        """
         vfs_root = temp_dir / vfs_root_rel
         lines = []
         for path in sorted(vfs_root.rglob("*")):
