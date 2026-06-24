@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar
 
 if TYPE_CHECKING:
     from java import JavaClass
+    from pytale.events._base import BaseEvent
 
 TEvent = TypeVar("TEvent")
 TResult = TypeVar("TResult")
@@ -17,22 +18,7 @@ class EventPriority(IntEnum):
     LAST = 21844
 
 
-class BaseEventHandler(Generic[TEvent, TResult]):
-    _handler: Callable[..., Any]  # narrowed in subclasses; accessible for logging
-
-    def __init__(
-        self,
-        java_class: "JavaClass",
-        *,
-        key: Any = None,
-        priority: EventPriority = EventPriority.NORMAL,
-    ):
-        self.java_class: Final["JavaClass"] = java_class
-        self.key: Final[Any] = key
-        self.priority: Final[EventPriority] = priority
-
-
-class EventHandler(BaseEventHandler[TEvent, TResult]):
+class EventHandler(Generic[TEvent, TResult]):
     def __init__(
         self,
         java_class: "JavaClass",
@@ -40,15 +26,19 @@ class EventHandler(BaseEventHandler[TEvent, TResult]):
         *,
         key: Any = None,
         priority: EventPriority = EventPriority.NORMAL,
+        wrapper_class: "type[BaseEvent] | None" = None,
     ):
-        super().__init__(java_class, key=key, priority=priority)
+        self.java_class: Final["JavaClass"] = java_class
+        self.key: Final[Any] = key
+        self.priority: Final[EventPriority] = priority
+        self.wrapper_class: Final["type[BaseEvent] | None"] = wrapper_class
         self._handler: Callable[[TEvent], TResult] = handler
 
     def __call__(self, event: TEvent) -> TResult:
         return self._handler(event)
 
 
-class AsyncEventHandler(BaseEventHandler[TEvent, TResult]):
+class AsyncEventHandler(EventHandler[TEvent, Awaitable[TResult]]):
     """Handler for IAsyncEvent events. Requires an async callable."""
 
     def __init__(
@@ -58,9 +48,8 @@ class AsyncEventHandler(BaseEventHandler[TEvent, TResult]):
         *,
         key: Any = None,
         priority: EventPriority = EventPriority.NORMAL,
+        wrapper_class: "type[BaseEvent] | None" = None,
     ):
-        super().__init__(java_class, key=key, priority=priority)
-        self._handler = handler
-
-    async def __call__(self, event: TEvent) -> TResult:
-        return await self._handler(event)
+        super().__init__(
+            java_class, handler, key=key, priority=priority, wrapper_class=wrapper_class
+        )

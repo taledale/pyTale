@@ -173,8 +173,8 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
         generalContext.withContext(() -> {
             try {
                 ctx.eval("python",
-                        "import pytale.events._async_registry as __areg\n" +
-                                "__async_handlers = __areg._async_handlers");
+                        "import pytale.events._registry as __reg\n" +
+                                "__async_handlers = __reg._async_handlers");
                 result.set(ctx.getBindings("python").getMember("__async_handlers").getArraySize() > 0);
             } catch (Exception e) {
                 getLogger().atWarning().log("Error checking async handlers: %s", e.getMessage());
@@ -216,8 +216,7 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
                 }
 
                 ctx.eval("python",
-                        "import pytale.events._async_registry as __areg\n" +
-                                "__async_handlers = __areg._async_handlers");
+                        "__async_handlers = __reg._async_handlers");
                 Value asyncHandlers = ctx.getBindings("python").getMember("__async_handlers");
                 int asyncSize = (int) asyncHandlers.getArraySize();
                 for (int i = 0; i < asyncSize; i++) {

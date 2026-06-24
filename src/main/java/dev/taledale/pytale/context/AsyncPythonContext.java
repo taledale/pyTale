@@ -51,7 +51,7 @@ public class AsyncPythonContext extends PythonContext {
             context.enter();
             try {
                 context.eval("python",
-                        "from pytale.events._async_registry import _start_loop\n" +
+                        "from pytale.events._registry import _start_loop\n" +
                                 "_start_loop(__async_queue)");
             } catch (PolyglotException e) {
                 logger.atWarning().log("Async event loop terminated: %s", e.getMessage());
