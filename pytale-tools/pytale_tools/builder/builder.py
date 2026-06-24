@@ -12,6 +12,7 @@ import json
 import zipfile
 from pathlib import Path
 
+from pytale_tools.builder.classgen import generate_plugin_class, module_to_class_name
 from pytale_tools.builder.pypi import download_wheels_sync
 from pytale_tools.builder.req_parser import parse_requirements
 
@@ -199,21 +200,16 @@ class PluginBuilder:
 
     # ------------------------------------------------------------------ loader + manifest + jar
 
+    def _plugin_class_internal_name(self) -> str:
+        class_name = module_to_class_name(self.module_name)
+        return f"{VFS_GROUP.lower()}/{self.module_name}/{class_name}"
+
     def _write_loader_class(self, jar: zipfile.ZipFile) -> str:
-        class_file = self._find_python_plugin_class()
-        if not class_file.exists():
-            raise FileNotFoundError(
-                f"PythonPlugin.class not found at {class_file}. "
-                f"Build PyTale first with: ./gradlew jar"
-            )
+        internal_name = self._plugin_class_internal_name()
+        jar.writestr(f"{internal_name}.class", generate_plugin_class(internal_name))
+        return internal_name.replace("/", ".")
 
-        jar.writestr("dev/taledale/pytale/PythonPlugin.class", class_file.read_bytes())
-        return "dev.taledale.pytale.PythonPlugin"
-
-    def _find_python_plugin_class(self) -> Path:
-        return Path(__file__).parent.parent / "resources" / "PythonPlugin.class"
-
-    def _write_manifest_json(self, jar: zipfile.ZipFile) -> None:
+    def _write_manifest_json(self, jar: zipfile.ZipFile, main_class: str) -> None:
         manifest = {
             "Group": VFS_GROUP,
             "Name": self.metadata["name"],
@@ -224,7 +220,7 @@ class PluginBuilder:
             "Dependencies": {"TaleDale:PyTale": ">=0.0.1"},
             "OptionalDependencies": {},
             "ServerVersion": "=0.5.6",
-            "Main": "dev.taledale.pytale.PythonPlugin",
+            "Main": main_class,
         }
         jar.writestr("manifest.json", json.dumps(manifest, indent=4))
 
@@ -235,8 +231,8 @@ class PluginBuilder:
         dependency_wheels = self._resolve_dependency_wheels()
 
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as jar:
-            self._write_loader_class(jar)
-            self._write_manifest_json(jar)
+            main_class = self._write_loader_class(jar)
+            self._write_manifest_json(jar, main_class)
             vfs_root_rel = self._write_vfs(jar, dependency_wheels)
             self._write_fileslist(jar, vfs_root_rel)
 

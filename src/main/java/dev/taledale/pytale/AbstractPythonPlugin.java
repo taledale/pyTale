@@ -39,12 +39,9 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
      * Builds a class loader whose resources are the plugin jar, used by the GraalPy
      * {@link org.graalvm.python.embedding.VirtualFileSystem} to locate the embedded venv.
      *
-     * <p>We cannot reuse {@code getClass().getClassLoader()}: the universal {@code PythonPlugin}
-     * loader class also lives in the framework jar, so in a dev setup (framework on the server
-     * classpath) it is loaded by the server class loader, which cannot see the plugin jar's VFS
-     * resources. Instead we load an anchor class child-first from the plugin jar itself
-     * ({@link #getFile()}), so its class loader's {@code getResources} resolves the VFS metadata
-     * regardless of how the framework is deployed.
+     * <p>We load an anchor class child-first from the plugin jar itself ({@link #getFile()}),
+     * so its class loader's {@code getResources} resolves the VFS metadata regardless of how
+     * the framework is deployed.
      */
     private void initResourceAnchor() throws Exception {
         URL jarUrl = getFile().toUri().toURL();

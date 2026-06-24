@@ -71,4 +71,3 @@ dmypy.json
 
 ### PyTale ###
 .pytale/
-pytale-tools/pytale_tools/resources/*

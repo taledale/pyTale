@@ -11,35 +11,3 @@ dependencies {
     implementation("org.graalvm.polyglot:python-community:25.0.3")
     implementation("org.graalvm.python:python-embedding:25.0.3")
 }
-
-tasks.register("extractPythonPluginClass") {
-    dependsOn("jar")
-    doLast {
-        val pytaleJar = file("build/libs/pytale.jar")
-        val resourceDir = file("pytale-tools/pytale_tools/resources")
-        val outputFile = file("pytale-tools/pytale_tools/resources/PythonPlugin.class")
-
-        if (!pytaleJar.exists()) {
-            throw GradleException("pytale.jar not found at ${pytaleJar.absolutePath}")
-        }
-
-        resourceDir.mkdirs()
-
-        project.zipTree(pytaleJar).matching {
-            include("dev/taledale/pytale/PythonPlugin.class")
-        }.forEach { file ->
-            if (file.isFile) {
-                file.copyTo(outputFile, overwrite = true)
-                println("✓ Extracted PythonPlugin.class to ${outputFile.relativeTo(rootDir)}")
-            }
-        }
-
-        if (!outputFile.exists()) {
-            throw GradleException("Failed to extract PythonPlugin.class from pytale.jar")
-        }
-    }
-}
-
-tasks.named("jar") {
-    finalizedBy("extractPythonPluginClass")
-}
