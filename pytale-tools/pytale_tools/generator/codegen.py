@@ -25,8 +25,6 @@ def _java_type_var_name(cls: ClassMeta) -> str:
 
 def _generate_property(prop: PropertySpec, indent: str) -> list[str]:
     lines: list[str] = []
-    if prop.is_deprecated:
-        lines.append(f'{indent}@deprecated("Deprecated in Java")')
     lines.append(f"{indent}@property")
     lines.append(f"{indent}def {prop.python_name}(self) -> {prop.return_type}:")
 
@@ -105,9 +103,6 @@ def _uses_deprecated(classes: list[ClassMeta]) -> bool:
     for cls in classes:
         if cls.is_deprecated:
             return True
-        for prop in _collect_all_properties(cls):
-            if prop.is_deprecated:
-                return True
         for inner in cls.inner_classes:
             if _uses_deprecated([inner]):
                 return True

@@ -186,7 +186,6 @@ class PlayerConnectEvent(Event):
     def holder(self) -> "JavaObject":
         return self._java.getHolder()
 
-    @deprecated("Deprecated in Java")
     @property
     def player(self) -> "JavaObject | None":
         return self._java.getPlayer()
