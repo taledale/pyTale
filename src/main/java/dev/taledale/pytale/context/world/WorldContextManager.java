@@ -52,6 +52,30 @@ public class WorldContextManager {
         return contexts.get(world.getName());
     }
 
+    /**
+     * Schedule a task at {@code index} to run on {@code world}'s tick thread, in that world's
+     * own Python context. Safe to call from any thread/context.
+     *
+     * <p>Returns a status string rather than throwing: a Java exception raised inside a Python
+     * host-interop call does not propagate as a catchable exception on the Python side (it
+     * unwinds straight past any {@code except} clause to the enclosing {@code context.eval()}
+     * call in Java instead), so failures must be signalled back to Python as an ordinary
+     * (host-safe) return value that Python code can branch on.
+     *
+     * @return {@code "ok"} if scheduled, {@code "no_context"} if the world has no initialized
+     *     context yet (e.g. still starting up or already removed), {@code "not_accepting"} if
+     *     the world's tick thread has stopped accepting tasks (shutting down).
+     */
+    public String executeTask(World world, int index, Object[] args, Map<String, Object> kwargs) {
+        WorldPythonContext context = getContext(world);
+        if (context == null) {
+            logger.atWarning().log(
+                    "No context for world %s, cannot schedule task %d", world.getName(), index);
+            return "no_context";
+        }
+        return context.invokeScheduledTask(index, args, kwargs);
+    }
+
     public void shutdown() {
         logger.atInfo().log("Shutting down world context manager");
         for (WorldPythonContext context : contexts.values()) {

@@ -1,19 +1,53 @@
 """Type wrappers, flags and errors for the world API"""
 
 from enum import IntFlag
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
 import java as _java
 
 if TYPE_CHECKING:
     from java import JavaObject
 
+from pytale._java_wrapper import JavaWrapper
 from pytale.message import Message, MessageLike
 from pytale.players import PlayerRef
-from pytale.world.errors import ChunkNotLoadedError, NotInWorldThreadError
+from pytale.plugin._plugin import get_world_context_manager
+from pytale.world._registry import Task
+from pytale.world.errors import (
+    ChunkNotLoadedError,
+    NotInWorldThreadError,
+    WorldNotAcceptingTasksError,
+)
 
 _Message = _java.type("com.hypixel.hytale.server.core.Message")
 _ChunkUtil = _java.type("com.hypixel.hytale.math.util.ChunkUtil")
+
+_EXECUTE_PRIMITIVE_TYPES = (int, float, str, bool, type(None))
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def _prepare_execute_arg(arg: Any) -> Any:
+    """Convert a single World.execute() argument to a cross-context-safe value.
+
+    JavaWrapper instances unwrap to their raw Java host object (safe: Java
+    host objects are Engine-scoped, not Context-scoped, unlike Python guest
+    values — already relied on by Universe.get_world()'s existing
+    cross-context return path). Raw Java host objects (java.is_object) pass
+    through unchanged, for the same reason.
+    """
+    if isinstance(arg, JavaWrapper):
+        return arg._java
+    if _java.is_object(arg):
+        return arg
+    if isinstance(arg, _EXECUTE_PRIMITIVE_TYPES):
+        return arg
+    raise TypeError(
+        "World.execute() arguments must be primitives (int, float, str, "
+        "bool, None), a pytale wrapper type, or a raw Java object; got "
+        f"{type(arg).__name__} for {arg!r}"
+    )
 
 
 class SetBlockSettings(IntFlag):
@@ -35,11 +69,8 @@ class SetBlockSettings(IntFlag):
     NO_DROP_ITEMS = 2048
 
 
-class WorldConfig:
+class WorldConfig(JavaWrapper):
     """Wrapper for com.hypixel.hytale.server.core.universe.world.WorldConfig"""
-
-    def __init__(self, java_obj: "JavaObject") -> None:
-        self._java = java_obj
 
     @property
     def uuid(self) -> str:
@@ -101,7 +132,7 @@ class WorldConfig:
         return f"WorldConfig(uuid={self.uuid}, seed={self.seed})"
 
 
-class World:
+class World(JavaWrapper):
     """Wrapper for com.hypixel.hytale.server.core.universe.world.World.
 
     Most methods are safe from any context: read-only metadata, the
@@ -114,7 +145,7 @@ class World:
     """
 
     def __init__(self, java_obj: "JavaObject") -> None:
-        self._java = java_obj
+        super().__init__(java_obj)
         self._config: WorldConfig | None = None
 
     def _require_thread(self, operation: str) -> None:
@@ -263,6 +294,39 @@ class World:
         """Set the world's target ticks per second."""
         self._require_thread("set_tps")
         self._java.setTps(tps)
+
+    def execute(self, task: "Task[P, R]", *args: P.args, **kwargs: P.kwargs) -> None:
+        """Schedule ``task`` to run on this world's tick thread, on a future tick.
+
+        ``task`` must be a module-level function decorated with
+        ``@pytale.world.task`` — a plain lambda/closure cannot be used, since
+        GraalPy values cannot cross between Python contexts and this call may
+        target a different world's context than the one calling it. Each
+        positional/keyword argument must be a primitive (int, float, str,
+        bool, None), a pytale wrapper instance (e.g. PlayerRef, World), or a
+        raw Java host object, for the same reason. Wrapper instances are
+        automatically unwrapped here and re-wrapped on arrival based on
+        ``task``'s own parameter annotations.
+
+        Callable from any context: the world's own context, another world's
+        context, or the general/async context. Never runs inline, even when
+        called from this world's own thread.
+        """
+        index = getattr(task, "_task_index", None)
+        if index is None:
+            raise TypeError(
+                f"{getattr(task, '__name__', task)!r} is not a task; "
+                "decorate it with @pytale.world.task"
+            )
+        prepared_args = tuple(_prepare_execute_arg(arg) for arg in args)
+        prepared_kwargs = {k: _prepare_execute_arg(v) for k, v in kwargs.items()}
+        status = get_world_context_manager().executeTask(
+            self._java, index, prepared_args, prepared_kwargs
+        )
+        if status == "not_accepting":
+            raise WorldNotAcceptingTasksError(self.name)
+        # "no_context" is a silent no-op (world's context isn't up yet or was
+        # torn down); "ok" means the task was successfully enqueued.
 
     def __repr__(self) -> str:
         return f"World({self.name})"

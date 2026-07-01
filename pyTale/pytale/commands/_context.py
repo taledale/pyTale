@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import java as _java
+from pytale._java_wrapper import JavaWrapper
 from pytale.message import Message, MessageLike
 from pytale.players import PlayerRef
 from pytale.world._types import World
@@ -15,15 +16,12 @@ _JPlayerRef = _java.type("com.hypixel.hytale.server.core.universe.PlayerRef")
 _SENTINEL = object()
 
 
-class CommandSender:
+class CommandSender(JavaWrapper):
     """Wrapper for com.hypixel.hytale.server.core.command.system.CommandSender.
 
     Represents the entity that executed a command — either a player or the
     server console. Safe to use from any execution context.
     """
-
-    def __init__(self, java_obj: "JavaObject") -> None:
-        self._java = java_obj
 
     @property
     def username(self) -> str:
@@ -56,7 +54,7 @@ class CommandSender:
         return f"CommandSender(username={self.username!r})"
 
 
-class CommandContext:
+class CommandContext(JavaWrapper):
     """Unified command context for all command types.
 
     Wraps the Java ``PythonCommandContext`` which provides string-based
@@ -65,7 +63,7 @@ class CommandContext:
     """
 
     def __init__(self, java_ctx: "JavaObject") -> None:
-        self._java = java_ctx
+        super().__init__(java_ctx)
         self._sender: CommandSender | None = None
         self._world: World | None = None
         self._player_ref: PlayerRef | None = None

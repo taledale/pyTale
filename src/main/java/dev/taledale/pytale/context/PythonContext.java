@@ -9,6 +9,7 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.io.IOAccess;
 import org.graalvm.python.embedding.GraalPyResources;
 import org.graalvm.python.embedding.VirtualFileSystem;
 
@@ -46,7 +47,20 @@ public class PythonContext {
         // GraalPyResources.forVirtualFileSystem configures the VFS filesystem and Python resource
         // options. We must NOT call allowAllAccess(true) (it would replace the VFS with IOAccess.ALL).
         // allowHostClassLookup is added so Python can resolve Java event classes.
+        //
+        // allowIO(...) must come BEFORE .apply(...): GraalPyResources internally calls
+        // extendIO(IOAccess.NONE, io -> io.fileSystem(vfs)), which initializes its IOAccess.Builder
+        // from whatever IOAccess is already set on the builder (falling back to IOAccess.NONE only
+        // if none is set yet) — so setting allowHostSocketAccess(true) here gets merged with, not
+        // overwritten by, the VFS filesystem config. Socket access + thread creation are both
+        // required for asyncio's event loop (AsyncPythonContext) to start: without socket access,
+        // asyncio.run() fails immediately with "UnsupportedOperation: socket was excluded"; with
+        // that fixed but no allowCreateThread, it then fails with "Creating threads is not allowed"
+        // (GraalPy's socket layer under the java POSIX backend spins up a helper thread for I/O).
+        // File access remains exclusively through the VFS — neither of these broadens it at all.
         this.context = Context.newBuilder()
+                .allowIO(IOAccess.newBuilder().allowHostSocketAccess(true).build())
+                .allowCreateThread(true)
                 .apply(GraalPyResources.forVirtualFileSystem(vfs))
                 .engine(plugin.getPythonEngine())
                 .allowHostAccess(HostAccess.ALL)
@@ -66,10 +80,12 @@ public class PythonContext {
         bindings.putMember("__data_directory", plugin.getDataDirectory());
         bindings.putMember("__context", executionContext.getValue());
         bindings.putMember("__plugin", plugin);
+        bindings.putMember("__world_context_manager", plugin.getWorldContextManager());
         context.eval("python",
                 "import pytale.plugin._plugin\n" +
                         "pytale.plugin._plugin._init_plugin" +
-                        "(__identifier, __manifest, __data_directory, __context, __plugin)");
+                        "(__identifier, __manifest, __data_directory, __context, __plugin, "
+                        + "__world_context_manager)");
 
         initContextBindings(bindings);
 

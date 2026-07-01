@@ -8,6 +8,7 @@ import java as _java
 if TYPE_CHECKING:
     from java import JavaObject
 
+from pytale._java_wrapper import JavaWrapper
 from pytale.message import Message, MessageLike
 from pytale.players import PlayerRef
 from pytale.world._types import World
@@ -17,7 +18,7 @@ _UUID = _java.type("java.util.UUID")
 _NameMatching = _java.type("com.hypixel.hytale.server.core.NameMatching")
 
 
-class Universe:
+class Universe(JavaWrapper):
     """Wrapper for com.hypixel.hytale.server.core.universe.Universe.
 
     The universe is a process-wide singleton that owns every loaded world and
@@ -29,9 +30,6 @@ class Universe:
     ``set_tps`` must run on that world's thread and raise
     ``pytale.world.NotInWorldThreadError`` if called in this context.
     """
-
-    def __init__(self, java_obj: "JavaObject") -> None:
-        self._java = java_obj
 
     # --- read-only properties ---
 

@@ -8,12 +8,13 @@ import java as _java
 if TYPE_CHECKING:
     from java import JavaObject
 
+from pytale._java_wrapper import JavaWrapper
 from pytale.message import Message, MessageLike
 
 _Message = _java.type("com.hypixel.hytale.server.core.Message")
 
 
-class PlayerRef:
+class PlayerRef(JavaWrapper):
     """Wrapper for com.hypixel.hytale.server.core.universe.PlayerRef.
 
     A PlayerRef is the persistent, server-wide handle for a connected player:
@@ -27,9 +28,6 @@ class PlayerRef:
     ``get_universe().players`` / ``get_player`` / ``get_player_by_name`` or via
     ``World.players``.
     """
-
-    def __init__(self, java_obj: "JavaObject") -> None:
-        self._java = java_obj
 
     # --- read-only properties ---
 

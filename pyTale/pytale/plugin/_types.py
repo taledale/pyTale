@@ -1,10 +1,8 @@
 """Type wrappers for Java objects from pyTale"""
 
 from enum import IntEnum
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from java import JavaObject
+from pytale._java_wrapper import JavaWrapper
 
 
 class ExecutionContext(IntEnum):
@@ -26,11 +24,8 @@ class PluginState(IntEnum):
     FAILED = 6
 
 
-class PluginIdentifier:
+class PluginIdentifier(JavaWrapper):
     """Wrapper for com.hypixel.hytale.common.plugin.PluginIdentifier"""
-
-    def __init__(self, java_obj: "JavaObject") -> None:
-        self._java = java_obj
 
     @property
     def group(self) -> str:
@@ -46,11 +41,8 @@ class PluginIdentifier:
         return f"PluginIdentifier({self.group}:{self.name})"
 
 
-class PluginManifest:
+class PluginManifest(JavaWrapper):
     """Wrapper for com.hypixel.hytale.common.plugin.PluginManifest"""
-
-    def __init__(self, java_obj: "JavaObject") -> None:
-        self._java: "JavaObject" = java_obj
 
     @property
     def group(self) -> str:

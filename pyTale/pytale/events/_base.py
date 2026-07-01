@@ -1,15 +1,14 @@
 from abc import ABC
 from typing import TYPE_CHECKING, ClassVar
 
+from pytale._java_wrapper import JavaWrapper
+
 if TYPE_CHECKING:
     from java import JavaClass, JavaObject
 
 
-class BaseEvent(ABC):
+class BaseEvent(JavaWrapper):
     _java_class: ClassVar["JavaClass"]
-
-    def __init__(self, java_obj: "JavaObject") -> None:
-        self._java = java_obj
 
 
 class Event(BaseEvent):

@@ -7,12 +7,14 @@ import java as _java
 if TYPE_CHECKING:
     from java import JavaObject
 
+from pytale._java_wrapper import JavaWrapper
+
 _Message = _java.type("com.hypixel.hytale.server.core.Message")
 
 MessageLike: TypeAlias = "str | Message"
 
 
-class Message:
+class Message(JavaWrapper):
     """Wrapper for com.hypixel.hytale.server.core.Message.
 
     Provides a fluent API for building styled, composed, and translatable
@@ -27,9 +29,6 @@ class Message:
 
         Message.translation("welcome.greeting").param("player", name)
     """
-
-    def __init__(self, java_obj: "JavaObject") -> None:
-        self._java = java_obj
 
     # --- factory methods ---
 

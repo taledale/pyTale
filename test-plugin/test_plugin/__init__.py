@@ -30,7 +30,7 @@ from pytale.plugin import (
     on_start,
 )
 from pytale.universe import get_universe
-from pytale.world import ChunkNotLoadedError, NotInWorldThreadError, get_world
+from pytale.world import ChunkNotLoadedError, NotInWorldThreadError, get_world, task
 
 print("=" * 60)
 print("pyTale Plugin Information")
@@ -174,6 +174,30 @@ def handle_player_ready(event: PlayerReadyEvent) -> None:
             )
         )
 
+    tick_before = world.tick
+    world.execute(log_scheduled_task, 42, b="hello-from-world-thread")
+    print(
+        f"[TASK] scheduled log_scheduled_task at tick={tick_before} "
+        "(should log on a later tick, never inline)"
+    )
+    if world.players:
+        world.execute(greet_player_task, world.players[0])
+
+    def _not_a_task() -> None:
+        pass
+
+    try:
+        world.execute(_not_a_task)  # type: ignore[arg-type]
+        print("[GUARD] ERROR: execute() accepted an undecorated function")
+    except TypeError as error:
+        print(f"[GUARD] execute() correctly rejected undecorated function: {error}")
+
+    try:
+        world.execute(log_scheduled_task, {"not": "primitive"})  # type: ignore[arg-type]
+        print("[GUARD] ERROR: execute() accepted a non-primitive/non-wrapper arg")
+    except TypeError as error:
+        print(f"[GUARD] execute() correctly rejected bad arg type: {error}")
+
 
 @on_event(PlayerChatEvent)
 async def handle_player_chat(event: PlayerChatEvent) -> None:
@@ -182,6 +206,33 @@ async def handle_player_chat(event: PlayerChatEvent) -> None:
     event.content = f"[async] {original}"
     print(
         f"[ASYNC-EVENT] PlayerChatEvent: {event.sender!r} said {original!r} → content prefixed"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Scheduled tasks (World.execute)
+# ---------------------------------------------------------------------------
+
+
+@task
+def log_scheduled_task(a: int, *, b: str = "default") -> None:
+    """Positional + keyword primitive args. Also exercises the Object[]/Map
+    -> tuple/dict conversion Java does at the context.eval() boundary."""
+    w = get_world()
+    print(f"[TASK] log_scheduled_task a={a} b={b} world={w.name} tick={w.tick}")
+
+
+@task
+def greet_player_task(player: PlayerRef) -> None:
+    """A JavaWrapper-typed arg: World.execute() unwraps the PlayerRef to its
+    raw Java object to safely cross contexts, and _execute_task rewraps it
+    back into a PlayerRef (not a raw Java object) before calling this."""
+    print(
+        f"[TASK] greet_player_task type={type(player).__name__} "
+        f"username={player.username}"
+    )
+    player.send_message(
+        Message.raw("Greetings from a scheduled task!").color("#00ffaa")
     )
 
 
@@ -234,3 +285,34 @@ async def handle_admin_status(ctx: CommandContext) -> None:
     ctx.send_message(
         f"pyTale is running! State: {get_state().name}, Context: {get_context().name}"
     )
+
+
+@admin.command("schedule-task", description="Schedule a task cross-context")
+async def handle_admin_schedule_task(ctx: CommandContext) -> None:
+    """DEFAULT-type command: runs on the async event loop, not any world's
+    thread. Scheduling here exercises genuine cross-context dispatch (as
+    opposed to handle_player_ready's same-world self-dispatch above).
+
+    ctx.world / ctx.player_ref are always None for DEFAULT-type commands
+    (only PLAYER/ASYNC_PLAYER commands resolve those on the world thread —
+    see PythonDefaultCommand.executeAsync, which always constructs
+    PythonCommandContext with world=null, playerRef=null regardless of who
+    ran the command). So look the player up via Universe instead, by name.
+    """
+    world = get_universe().get_default_world()
+    if world is None:
+        ctx.send_message("No world available to schedule on")
+        return
+
+    world.execute(log_scheduled_task, 7, b="from-async-command")
+    message = f"Scheduled log_scheduled_task on {world.name!r} from an async command"
+
+    player = (
+        get_universe().get_player_by_name(ctx.sender.username)
+        if ctx.sender.is_player
+        else None
+    )
+    if player is not None:
+        world.execute(greet_player_task, player)
+        message += " + greet_player_task for you"
+    ctx.send_message(message)

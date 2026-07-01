@@ -18,6 +18,7 @@ __manifest: PluginManifest | None = None
 __data_directory: Path | None = None
 __context: ExecutionContext | None = None
 __plugin_ref: "JavaObject | None" = None
+__world_context_manager: "JavaObject | None" = None
 
 
 def _init_plugin(
@@ -26,14 +27,16 @@ def _init_plugin(
     data_directory: "JavaObject",
     context: int,
     java_plugin: "JavaObject",
+    world_context_manager: "JavaObject",
 ) -> None:
     """Called by Java during plugin context initialization"""
-    global __identifier, __manifest, __data_directory, __context, __plugin_ref
+    global __identifier, __manifest, __data_directory, __context, __plugin_ref, __world_context_manager
     __identifier = PluginIdentifier(identifier)
     __manifest = PluginManifest(manifest)
     __data_directory = Path(str(data_directory))
     __context = ExecutionContext(context)
     __plugin_ref = java_plugin
+    __world_context_manager = world_context_manager
 
 
 def get_identifier() -> PluginIdentifier:
@@ -69,3 +72,11 @@ def get_state() -> PluginState:
     if __plugin_ref is None:
         raise RuntimeError("Plugin not initialized")
     return PluginState[str(__plugin_ref.getState().name())]
+
+
+def get_world_context_manager() -> "JavaObject":
+    """Get the Java WorldContextManager host object, used by World.execute() to
+    dispatch a scheduled task into an arbitrary world's context."""
+    if __world_context_manager is None:
+        raise RuntimeError("Plugin not initialized")
+    return __world_context_manager

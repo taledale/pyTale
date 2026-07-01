@@ -10,6 +10,7 @@ import java as _java
 if TYPE_CHECKING:
     from java import JavaObject
 
+from pytale._java_wrapper import JavaWrapper
 from pytale.players import PlayerRef
 
 Permission = NewType("Permission", str)
@@ -178,7 +179,7 @@ class _ProviderBridge:
 
 
 @final
-class PermissionsManager:
+class PermissionsManager(JavaWrapper):
     """Wrapper for com.hypixel.hytale.server.core.permissions.PermissionsModule.
 
     The permissions module is a process-wide singleton that manages permission
@@ -187,7 +188,6 @@ class PermissionsManager:
     """
 
     _instance: ClassVar["PermissionsManager | None"] = None
-    _java: "JavaObject"
     _bridges: dict[PermissionProvider, _ProviderBridge]
 
     def __new__(cls) -> "PermissionsManager":
@@ -198,6 +198,9 @@ class PermissionsManager:
         self._bridges = {}
         cls._instance = self
         return self
+
+    def __init__(self) -> None:
+        pass  # _java/_bridges are already set in __new__
 
     def register_permission(self, permission: Permission, *groups: GroupName) -> None:
         """Register a permission node, optionally assigning it to groups."""

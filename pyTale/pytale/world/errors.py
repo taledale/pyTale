@@ -27,3 +27,14 @@ class ChunkNotLoadedError(Exception):
         self.y = y
         self.z = z
         super().__init__(f"Chunk for block ({x}, {y}, {z}) is not loaded")
+
+
+class WorldNotAcceptingTasksError(RuntimeError):
+    """Raised by World.execute() when the target world's tick thread has already
+    stopped accepting tasks (world is shutting down or already stopped)."""
+
+    def __init__(self, world_name: str) -> None:
+        self.world_name = world_name
+        super().__init__(
+            f"World {world_name!r} is not accepting tasks (shutting down or already stopped)"
+        )

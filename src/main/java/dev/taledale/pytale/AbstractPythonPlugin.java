@@ -461,4 +461,8 @@ public abstract class AbstractPythonPlugin extends JavaPlugin {
     public Context getGeneralContext() {
         return generalContext != null ? generalContext.getContext() : null;
     }
+
+    public WorldContextManager getWorldContextManager() {
+        return worldContextManager;
+    }
 }
