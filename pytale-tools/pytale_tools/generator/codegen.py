@@ -40,6 +40,16 @@ def _generate_property(prop: PropertySpec, indent: str) -> list[str]:
             lines.append(
                 f"{indent}    return {prop.wrapper_class}(self._java.{prop.getter_java_name}())"
             )
+    elif prop.from_java_func is not None:
+        if prop.nullability.name == "NULLABLE":
+            lines.append(f"{indent}    _value = self._java.{prop.getter_java_name}()")
+            lines.append(
+                f"{indent}    return {prop.from_java_func}(_value) if _value is not None else None"
+            )
+        else:
+            lines.append(
+                f"{indent}    return {prop.from_java_func}(self._java.{prop.getter_java_name}())"
+            )
     else:
         lines.append(f"{indent}    return self._java.{prop.getter_java_name}()")
 
@@ -51,6 +61,10 @@ def _generate_property(prop: PropertySpec, indent: str) -> list[str]:
         )
         if prop.setter_wrapper_class is not None:
             lines.append(f"{indent}    self._java.{prop.setter_java_name}(value._java)")
+        elif prop.setter_to_java_func is not None:
+            lines.append(
+                f"{indent}    self._java.{prop.setter_java_name}({prop.setter_to_java_func}(value))"
+            )
         else:
             lines.append(f"{indent}    self._java.{prop.setter_java_name}(value)")
 
@@ -132,6 +146,12 @@ def _collect_wrapper_imports(classes: list[ClassMeta]) -> dict[str, set[str]]:
         for prop in _collect_all_properties(cls):
             if prop.wrapper_import and prop.wrapper_class:
                 imports[prop.wrapper_import].add(prop.wrapper_class)
+            if prop.value_converter_import and prop.value_converter_class:
+                imports[prop.value_converter_import].add(prop.value_converter_class)
+            if prop.from_java_func_import and prop.from_java_func:
+                imports[prop.from_java_func_import].add(prop.from_java_func)
+            if prop.setter_to_java_func_import and prop.setter_to_java_func:
+                imports[prop.setter_to_java_func_import].add(prop.setter_to_java_func)
     return dict(imports)
 
 

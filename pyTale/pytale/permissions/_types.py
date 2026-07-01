@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from java import JavaObject
 
 from pytale._java_wrapper import JavaWrapper
+from pytale._uuid import java_uuid_to_python, python_uuid_to_java
 from pytale.players import PlayerRef
 
 Permission = NewType("Permission", str)
@@ -20,7 +21,6 @@ GroupName = NewType("GroupName", str)
 _PermissionsModule = _java.type(
     "com.hypixel.hytale.server.core.permissions.PermissionsModule"
 )
-_UUID = _java.type("java.util.UUID")
 _HashSet = _java.type("java.util.HashSet")
 _HashMap = _java.type("java.util.HashMap")
 
@@ -42,11 +42,7 @@ def _to_java_set(strings: Iterable[str]) -> "JavaObject":
 def _resolve_uuid(player: "PlayerRef | UUID") -> "JavaObject":
     if isinstance(player, PlayerRef):
         return player._java.getUuid()
-    return _UUID.fromString(str(player))
-
-
-def _to_python_uuid(java_uuid: "JavaObject") -> UUID:
-    return UUID(str(java_uuid))
+    return python_uuid_to_java(player)
 
 
 class PermissionProvider(ABC):
@@ -121,13 +117,15 @@ class _ProviderBridge:
         return self._provider.get_name()
 
     def getUserPermissions(self, uuid: "JavaObject") -> "JavaObject":
-        return _to_java_set(self._provider.get_user_permissions(_to_python_uuid(uuid)))
+        return _to_java_set(
+            self._provider.get_user_permissions(java_uuid_to_python(uuid))
+        )
 
     def addUserPermissions(
         self, uuid: "JavaObject", permissions: _JavaCollection
     ) -> None:
         self._provider.add_user_permissions(
-            _to_python_uuid(uuid),
+            java_uuid_to_python(uuid),
             frozenset(Permission(str(s)) for s in permissions),
         )
 
@@ -135,7 +133,7 @@ class _ProviderBridge:
         self, uuid: "JavaObject", permissions: _JavaCollection
     ) -> None:
         self._provider.remove_user_permissions(
-            _to_python_uuid(uuid),
+            java_uuid_to_python(uuid),
             frozenset(Permission(str(s)) for s in permissions),
         )
 
@@ -160,16 +158,20 @@ class _ProviderBridge:
         )
 
     def getGroupsForUser(self, uuid: "JavaObject") -> "JavaObject":
-        return _to_java_set(self._provider.get_groups_for_user(_to_python_uuid(uuid)))
+        return _to_java_set(
+            self._provider.get_groups_for_user(java_uuid_to_python(uuid))
+        )
 
     def addUserToGroup(self, uuid: "JavaObject", group: str) -> None:
-        self._provider.add_user_to_group(_to_python_uuid(uuid), GroupName(group))
+        self._provider.add_user_to_group(java_uuid_to_python(uuid), GroupName(group))
 
     def removeUserFromGroup(self, uuid: "JavaObject", group: str) -> None:
-        self._provider.remove_user_from_group(_to_python_uuid(uuid), GroupName(group))
+        self._provider.remove_user_from_group(
+            java_uuid_to_python(uuid), GroupName(group)
+        )
 
     def setUserGroup(self, uuid: "JavaObject", group: str) -> None:
-        self._provider.set_user_group(_to_python_uuid(uuid), GroupName(group))
+        self._provider.set_user_group(java_uuid_to_python(uuid), GroupName(group))
 
     def getGroupParent(self, group: str) -> str | None:
         return self._provider.get_group_parent(GroupName(group))

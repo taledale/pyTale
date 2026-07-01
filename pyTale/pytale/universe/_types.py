@@ -1,20 +1,15 @@
 """Type wrapper for the server-wide universe API"""
 
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 import java as _java
-
-if TYPE_CHECKING:
-    from java import JavaObject
-
 from pytale._java_wrapper import JavaWrapper
+from pytale._uuid import python_uuid_to_java
 from pytale.message import Message, MessageLike
 from pytale.players import PlayerRef
 from pytale.world._types import World
 
 _Message = _java.type("com.hypixel.hytale.server.core.Message")
-_UUID = _java.type("java.util.UUID")
 _NameMatching = _java.type("com.hypixel.hytale.server.core.NameMatching")
 
 
@@ -55,9 +50,9 @@ class Universe(JavaWrapper):
         world = self._java.getWorld(name)
         return World(world) if world is not None else None
 
-    def get_world_by_uuid(self, uuid: str) -> World | None:
+    def get_world_by_uuid(self, uuid: UUID) -> World | None:
         """Return the world with the given UUID, or None if not loaded."""
-        world = self._java.getWorld(_UUID.fromString(uuid))
+        world = self._java.getWorld(python_uuid_to_java(uuid))
         return World(world) if world is not None else None
 
     def get_default_world(self) -> World | None:
@@ -67,7 +62,7 @@ class Universe(JavaWrapper):
 
     def get_player(self, uuid: UUID) -> PlayerRef | None:
         """Return the connected player with the given UUID, or None."""
-        player = self._java.getPlayer(_UUID.fromString(str(uuid)))
+        player = self._java.getPlayer(python_uuid_to_java(uuid))
         return PlayerRef(player) if player is not None else None
 
     def get_player_by_name(self, name: str) -> PlayerRef | None:

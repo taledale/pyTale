@@ -3,6 +3,7 @@ from uuid import UUID
 
 import java as _java
 from pytale._java_wrapper import JavaWrapper
+from pytale._uuid import java_uuid_to_python
 from pytale.message import Message, MessageLike
 from pytale.players import PlayerRef
 from pytale.world._types import World
@@ -30,7 +31,7 @@ class CommandSender(JavaWrapper):
     @property
     def uuid(self) -> UUID | None:
         raw = self._java.getUuid()
-        return UUID(str(raw)) if raw is not None else None
+        return java_uuid_to_python(raw) if raw is not None else None
 
     @property
     def is_player(self) -> bool:

@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from java import JavaObject
 
 from pytale._java_wrapper import JavaWrapper
+from pytale._uuid import java_uuid_to_python, python_uuid_to_java
 from pytale.components import Component
 from pytale.entities import EntityRef
 from pytale.message import Message, MessageLike
@@ -25,7 +26,6 @@ from pytale.world.errors import (
 _Message = _java.type("com.hypixel.hytale.server.core.Message")
 _ChunkUtil = _java.type("com.hypixel.hytale.math.util.ChunkUtil")
 _EntityBridge = _java.type("dev.taledale.pytale.entity.EntityBridge")
-_UUID = _java.type("java.util.UUID")
 _AddReason = _java.type("com.hypixel.hytale.component.AddReason")
 
 _EXECUTE_PRIMITIVE_TYPES = (int, float, str, bool, type(None))
@@ -79,8 +79,8 @@ class WorldConfig(JavaWrapper):
     """Wrapper for com.hypixel.hytale.server.core.universe.world.WorldConfig"""
 
     @property
-    def uuid(self) -> str:
-        return str(self._java.getUuid())
+    def uuid(self) -> UUID:
+        return java_uuid_to_python(self._java.getUuid())
 
     @property
     def seed(self) -> int:
@@ -307,7 +307,7 @@ class World(JavaWrapper):
         Safe to call from any context: the Java side self-dispatches when off the
         world thread (mirrors is_chunk_loaded).
         """
-        ref = self._java.getEntityRef(_UUID.fromString(str(uuid)))
+        ref = self._java.getEntityRef(python_uuid_to_java(uuid))
         if ref is None:
             return None
         return EntityRef(

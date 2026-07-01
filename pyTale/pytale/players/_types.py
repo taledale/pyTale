@@ -1,14 +1,10 @@
 """Type wrapper for the server-wide player handle"""
 
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 import java as _java
-
-if TYPE_CHECKING:
-    from java import JavaObject
-
 from pytale._java_wrapper import JavaWrapper
+from pytale._uuid import java_uuid_to_python
 from pytale.message import Message, MessageLike
 
 _Message = _java.type("com.hypixel.hytale.server.core.Message")
@@ -34,7 +30,7 @@ class PlayerRef(JavaWrapper):
     @property
     def uuid(self) -> UUID:
         """The player's unique identifier."""
-        return UUID(str(self._java.getUuid()))
+        return java_uuid_to_python(self._java.getUuid())
 
     @property
     def username(self) -> str:
@@ -45,7 +41,7 @@ class PlayerRef(JavaWrapper):
     def world_uuid(self) -> UUID | None:
         """UUID of the world the player is currently in, or None if not in one."""
         world_uuid = self._java.getWorldUuid()
-        return UUID(str(world_uuid)) if world_uuid is not None else None
+        return java_uuid_to_python(world_uuid) if world_uuid is not None else None
 
     @property
     def is_valid(self) -> bool:

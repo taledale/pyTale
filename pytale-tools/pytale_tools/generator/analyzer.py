@@ -6,7 +6,11 @@ from pytale_tools.generator.naming import (
     extract_setter_stem,
     java_getter_to_python_name,
 )
-from pytale_tools.generator.type_map import get_wrapper_info, map_descriptor
+from pytale_tools.generator.type_map import (
+    get_value_converter_info,
+    get_wrapper_info,
+    map_descriptor,
+)
 
 
 @dataclass(frozen=True)
@@ -20,6 +24,12 @@ class PropertySpec:
     wrapper_class: str | None = None
     wrapper_import: str | None = None
     setter_wrapper_class: str | None = None
+    value_converter_class: str | None = None
+    value_converter_import: str | None = None
+    from_java_func: str | None = None
+    from_java_func_import: str | None = None
+    setter_to_java_func: str | None = None
+    setter_to_java_func_import: str | None = None
     is_deprecated: bool = False
 
 
@@ -91,9 +101,23 @@ def analyze_properties(cls: ClassMeta) -> None:
         wrapper_class = wrapper_info[0] if wrapper_info else None
         wrapper_import = wrapper_info[1] if wrapper_info else None
 
+        value_converter_class: str | None = None
+        value_converter_import: str | None = None
+        from_java_func: str | None = None
+        from_java_func_import: str | None = None
+        if wrapper_info is None:
+            converter_info = get_value_converter_info(getter.return_type_descriptor)
+            if converter_info is not None:
+                value_converter_class = converter_info.python_class
+                value_converter_import = converter_info.python_import
+                from_java_func = converter_info.from_java_func
+                from_java_func_import = converter_info.from_java_func_import
+
         setter_param_type: str | None = None
         setter_java_name: str | None = None
         setter_wrapper_class: str | None = None
+        setter_to_java_func: str | None = None
+        setter_to_java_func_import: str | None = None
         if setter is not None:
             setter_java_name = setter.name
             setter_param_type = map_descriptor(
@@ -102,6 +126,15 @@ def analyze_properties(cls: ClassMeta) -> None:
             setter_wrapper_info = get_wrapper_info(setter.param_type_descriptors[0])
             if setter_wrapper_info:
                 setter_wrapper_class = setter_wrapper_info[0]
+            else:
+                setter_converter_info = get_value_converter_info(
+                    setter.param_type_descriptors[0]
+                )
+                if setter_converter_info is not None:
+                    setter_to_java_func = setter_converter_info.to_java_func
+                    setter_to_java_func_import = (
+                        setter_converter_info.to_java_func_import
+                    )
 
         properties.append(
             PropertySpec(
@@ -114,6 +147,12 @@ def analyze_properties(cls: ClassMeta) -> None:
                 wrapper_class=wrapper_class,
                 wrapper_import=wrapper_import,
                 setter_wrapper_class=setter_wrapper_class,
+                value_converter_class=value_converter_class,
+                value_converter_import=value_converter_import,
+                from_java_func=from_java_func,
+                from_java_func_import=from_java_func_import,
+                setter_to_java_func=setter_to_java_func,
+                setter_to_java_func_import=setter_to_java_func_import,
                 is_deprecated=getter.is_deprecated,
             )
         )

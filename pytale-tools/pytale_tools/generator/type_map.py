@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from pytale_tools.exporter.models import Nullability
 
 _PRIMITIVE_MAP: dict[str, str] = {
@@ -46,6 +48,33 @@ _WRAPPER_MAP: dict[str, tuple[str, str]] = {
 }
 
 
+@dataclass(frozen=True)
+class ValueConverterInfo:
+    """Describes a value type that isn't a pytale JavaWrapper (no `._java`
+    attribute), so it can't use _WRAPPER_MAP's direct `WrapperClass(raw)` /
+    `value._java` round-trip. Instead, reads/writes call dedicated conversion
+    functions (e.g. pytale._uuid.java_uuid_to_python)."""
+
+    python_class: str
+    python_import: str
+    from_java_func: str
+    from_java_func_import: str
+    to_java_func: str
+    to_java_func_import: str
+
+
+_VALUE_CONVERTER_MAP: dict[str, ValueConverterInfo] = {
+    "Ljava/util/UUID;": ValueConverterInfo(
+        python_class="UUID",
+        python_import="uuid",
+        from_java_func="java_uuid_to_python",
+        from_java_func_import="pytale._uuid",
+        to_java_func="python_uuid_to_java",
+        to_java_func_import="pytale._uuid",
+    ),
+}
+
+
 def map_descriptor(
     descriptor: str, nullability: Nullability = Nullability.UNSPECIFIED
 ) -> str:
@@ -66,6 +95,12 @@ def map_descriptor(
             return f"{cls_name} | None"
         return cls_name
 
+    converter = _VALUE_CONVERTER_MAP.get(descriptor)
+    if converter is not None:
+        if nullability == Nullability.NULLABLE:
+            return f"{converter.python_class} | None"
+        return converter.python_class
+
     if nullability == Nullability.NULLABLE:
         return '"JavaObject | None"'
     return '"JavaObject"'
@@ -73,3 +108,7 @@ def map_descriptor(
 
 def get_wrapper_info(descriptor: str) -> tuple[str, str] | None:
     return _WRAPPER_MAP.get(descriptor)
+
+
+def get_value_converter_info(descriptor: str) -> ValueConverterInfo | None:
+    return _VALUE_CONVERTER_MAP.get(descriptor)
