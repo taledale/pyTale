@@ -43,10 +43,11 @@ public class PythonContext {
                 .resourceLoadingClass(plugin.getResourceAnchorClass())
                 .build();
 
-        // GraalPyResources.contextBuilder configures allowAllAccess(false) plus the VFS filesystem;
-        // we must NOT call allowAllAccess(true) (it would replace the VFS with IOAccess.ALL). We do
-        // re-add allowHostClassLookup, which pyTale needs so Python can resolve Java event classes.
-        this.context = GraalPyResources.contextBuilder(vfs)
+        // GraalPyResources.forVirtualFileSystem configures the VFS filesystem and Python resource
+        // options. We must NOT call allowAllAccess(true) (it would replace the VFS with IOAccess.ALL).
+        // allowHostClassLookup is added so Python can resolve Java event classes.
+        this.context = Context.newBuilder()
+                .apply(GraalPyResources.forVirtualFileSystem(vfs))
                 .engine(plugin.getPythonEngine())
                 .allowHostAccess(HostAccess.ALL)
                 .allowHostClassLookup(_ -> true)
